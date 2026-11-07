@@ -1,144 +1,74 @@
 /* ==========================================================================
    THE OUTBOUND STUDIO — SCRIPT
-   Handles: sticky nav state, mobile menu, scroll reveals,
-   FAQ accordion, metric counters. No dependencies.
+   Mobile menu, services tabs (with arrow-key support), scroll reveal.
+   No dependencies.
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------------------------------------------------------------------
-     Sticky nav background on scroll
+     Mobile menu
      --------------------------------------------------------------------- */
-  const nav = document.getElementById('nav');
-  const setNavState = () => {
-    nav.classList.toggle('is-scrolled', window.scrollY > 12);
-  };
-  setNavState();
-  window.addEventListener('scroll', setNavState, { passive: true });
+  const toggle = document.getElementById('navToggle');
+  const menu = document.getElementById('mobileMenu');
 
-  /* ---------------------------------------------------------------------
-     Mobile menu toggle
-     --------------------------------------------------------------------- */
-  const navToggle = document.getElementById('navToggle');
-  const mobileMenu = document.getElementById('mobileMenu');
-
-  const closeMobileMenu = () => {
-    mobileMenu.classList.remove('is-open');
-    navToggle.setAttribute('aria-expanded', 'false');
-    navToggle.setAttribute('aria-label', 'Open menu');
+  const setMenu = (open) => {
+    menu.classList.toggle('is-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
   };
 
-  const toggleMobileMenu = () => {
-    const isOpen = mobileMenu.classList.toggle('is-open');
-    navToggle.setAttribute('aria-expanded', String(isOpen));
-    navToggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  toggle.addEventListener('click', () => setMenu(!menu.classList.contains('is-open')));
+  menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+  window.addEventListener('resize', () => { if (window.innerWidth > 900) setMenu(false); });
+
+  /* ---------------------------------------------------------------------
+     Services tabs
+     --------------------------------------------------------------------- */
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const panels = Array.from(document.querySelectorAll('.service-panel'));
+
+  const selectTab = (tab, focus = false) => {
+    tabs.forEach((t) => {
+      const active = t === tab;
+      t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
+    });
+    panels.forEach((p) => p.classList.toggle('is-active', p.id === tab.getAttribute('aria-controls')));
+    if (focus) tab.focus();
   };
 
-  navToggle.addEventListener('click', toggleMobileMenu);
-
-  mobileMenu.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', closeMobileMenu);
-  });
-
-  /* ---------------------------------------------------------------------
-     Scroll reveal animations
-     --------------------------------------------------------------------- */
-  const revealTargets = document.querySelectorAll(
-    '.section-title, .section-sub, .problem-card, .step, .service-card, .metric-card, .compare-col, .faq-item'
-  );
-  revealTargets.forEach((el) => el.classList.add('reveal'));
-
-  if (prefersReducedMotion || !('IntersectionObserver' in window)) {
-    revealTargets.forEach((el) => el.classList.add('is-visible'));
-  } else {
-    const revealObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            revealObserver.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
-    );
-    revealTargets.forEach((el) => revealObserver.observe(el));
-  }
-
-  /* ---------------------------------------------------------------------
-     FAQ accordion
-     --------------------------------------------------------------------- */
-  const faqQuestions = document.querySelectorAll('.faq-question');
-
-  faqQuestions.forEach((question) => {
-    const answer = question.nextElementSibling;
-
-    question.addEventListener('click', () => {
-      const isOpen = question.getAttribute('aria-expanded') === 'true';
-
-      // Close all other items
-      faqQuestions.forEach((otherQuestion) => {
-        if (otherQuestion !== question) {
-          otherQuestion.setAttribute('aria-expanded', 'false');
-          otherQuestion.nextElementSibling.style.maxHeight = null;
-        }
-      });
-
-      // Toggle current item
-      question.setAttribute('aria-expanded', String(!isOpen));
-      answer.style.maxHeight = isOpen ? null : `${answer.scrollHeight}px`;
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => selectTab(tab));
+    tab.addEventListener('keydown', (e) => {
+      let next = null;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === 'Home') next = tabs[0];
+      if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (next) { e.preventDefault(); selectTab(next, true); }
     });
   });
 
   /* ---------------------------------------------------------------------
-     Metric counter animation
+     Scroll reveal
      --------------------------------------------------------------------- */
-  const metricValues = document.querySelectorAll('.metric-value[data-count]');
+  const targets = document.querySelectorAll(
+    '.intro > *, .results > *, .metric, .process h2, .step, .services, .philosophy, .value, .testimonial-card, .cta, .footer-grid'
+  );
 
-  const animateCount = (el) => {
-    const target = parseInt(el.dataset.count, 10);
-    const suffix = el.dataset.suffix || '';
-    const originalText = el.textContent.trim();
-    const digitCount = originalText.replace(/[^0]/g, '').length || String(target).length;
+  if (reduceMotion || !('IntersectionObserver' in window)) return;
 
-    if (prefersReducedMotion || target === 0) {
-      return; // keep placeholder text as-is
-    }
-
-    const duration = 1200;
-    const start = performance.now();
-
-    const step = (now) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const value = Math.round(target * eased);
-      el.textContent = `${String(value).padStart(digitCount, '0')}${suffix}`;
-      if (progress < 1) requestAnimationFrame(step);
-    };
-
-    requestAnimationFrame(step);
-  };
-
-  if (metricValues.length && 'IntersectionObserver' in window) {
-    const metricObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            animateCount(entry.target);
-            metricObserver.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.4 }
-    );
-    metricValues.forEach((el) => metricObserver.observe(el));
-  }
-
-  /* ---------------------------------------------------------------------
-     Close mobile menu on resize to desktop width
-     --------------------------------------------------------------------- */
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 860) closeMobileMenu();
-  });
+  targets.forEach((el) => el.classList.add('reveal'));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+  targets.forEach((el) => io.observe(el));
 });
