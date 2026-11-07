@@ -28,9 +28,11 @@
   --r-pill: 999px;
 
   /* ---- Layout ---- */
-  --page-max: 1040px;
-  --gutter:   14px;
-  --nav-h:    66px;
+  --page-max: 2200px;                        /* effectively fluid: fills laptops and large monitors */
+  --gutter:   clamp(10px, 1.4vw, 24px);      /* side breathing room, grows with screen */
+  --nav-h:    clamp(62px, 4vw, 74px);
+  --block-pad-y: clamp(40px, 4.2vw, 80px);   /* inner padding of the big rounded blocks */
+  --block-pad-x: clamp(28px, 4.2vw, 80px);
 
   /* ---- Motion ---- */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -42,7 +44,14 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 96px; }
+/* Root size grows with the viewport (16px on phones → ~19px on large screens),
+   so every rem-based size scales together and nothing looks tiny on a laptop. */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 96px;
+  font-size: clamp(16px, 0.75vw + 8px, 19px);
+}
 
 body {
   margin: 0;
@@ -169,10 +178,10 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
   background: var(--ink);
   color: var(--cream);
   border-radius: var(--r-lg);
-  padding: 56px 40px 56px;
+  padding: var(--block-pad-y) var(--block-pad-x);
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  gap: 40px;
+  gap: clamp(32px, 4vw, 72px);
   align-items: center;
 }
 
@@ -214,7 +223,7 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
    SHARED SECTION RULES
    ========================================================================== */
 
-.section { padding: 72px 8px 24px; }
+.section { padding: 72px clamp(4px, 1vw, 16px) 24px; }
 .section h2, .services h2, .philosophy h2 { font-weight: 700; line-height: 1.1; }
 
 /* ==========================================================================
@@ -268,7 +277,7 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
 .services {
   background: var(--yellow);
   border-radius: var(--r-lg);
-  padding: 48px 48px 40px;
+  padding: var(--block-pad-y) var(--block-pad-x);
 }
 .services h2 { font-size: 2.1rem; }
 
@@ -308,7 +317,7 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
   margin-top: 14px;
   background: var(--sand);
   border-radius: var(--r-lg);
-  padding: 44px 40px 56px;
+  padding: var(--block-pad-y) var(--block-pad-x);
 }
 .philosophy h2 { margin-top: 26px; font-size: clamp(1.8rem, 4vw, 2.45rem); }
 .philosophy-intro { margin-top: 30px; font-size: 0.8rem; max-width: 60em; }
@@ -339,7 +348,7 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
   margin-top: 28px;
   background: var(--ink); color: var(--cream);
   border-radius: var(--r-md);
-  padding: 22px 40px 40px;
+  padding: clamp(28px, 3vw, 56px) var(--block-pad-x) clamp(36px, 3.4vw, 64px);
 }
 .cta h2 { font-size: clamp(2.2rem, 5.6vw, 3.9rem); line-height: 1.05; font-weight: 700; max-width: 14em; }
 .cta p { margin-top: 28px; font-size: 0.82rem; }
@@ -371,9 +380,8 @@ h1, h2, h3, .card-title, .metric-value, .footer-title {
    ========================================================================== */
 
 @media (max-width: 900px) {
-  .nav-links, .nav-owner { display: none; }
+  .nav-links, .nav-actions { display: none; }   /* only logo + hamburger on small screens */
   .nav-pill { grid-template-columns: 1fr auto; }
-  .nav-actions .btn { display: none; }
   .nav-toggle { display: block; }
 
   .hero { grid-template-columns: 1fr; padding: 44px 28px; gap: 36px; }
